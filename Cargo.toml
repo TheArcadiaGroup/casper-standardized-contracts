@@ -1,0 +1,15 @@
+[workspace]
+members = [
+    "erc20",
+    "libs",
+    "factory",
+    "pair",
+    "tests"
+]
+
+# enable overflow checks to make it behave like we used SafeMath in solidity
+[profile.release]
+overflow-checks = true
+lto = true
+codegen-units = 1
+opt-level="z"
