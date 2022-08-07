@@ -27,36 +27,67 @@ pub mod events;
 use events::OwnableEvent;
 
 /// # Purpose
-/// * Returns the `owner` property.
+/// * Returns the `has_role` property.
 #[no_mangle]
-pub extern "C" fn owner() {
-    let owner: String = get_key("owner");
-    ret(owner)
+pub extern "C" fn has_role() {
+    let role: U256 = runtime::get_named_arg("role");
+    let account: Key = runtime::get_named_arg("account");
+
+    ret(account)
 }
 
 /// # Purpose
-/// * Transfers the ownership of the contract to the given address.
+/// * Returns the `get_role_admin` property.
+#[no_mangle]
+pub extern "C" fn get_role_admin() {
+    let role: U256 = runtime::get_named_arg("role");
+    ret(role)
+}
+
+/// # Purpose
+/// * Grant role to given address
 /// # Arguments
-/// * `new_owner` - `Key` -> Address of the new owner.
+/// * `role` - `U256` -> Role.
+/// * `account` - `Key` -> Address of the account.
 #[no_mangle]
-pub extern "C" fn transfer_ownership() {
-    let new_owner: Key = runtime::get_named_arg("new_owner");
+pub extern "C" fn grant_role() {
+    let role: Key = runtime::get_named_arg("role");
+    let account: Key = runtime::get_named_arg("account");
 
-    _transfer_ownership(new_owner, true);
+    _grant_role(role, account);
 }
 
 /// # Purpose
-/// * Renounce ownership of contract.
+/// * Revoke role
+/// # Arguments
+/// * `role` - `U256` -> Role.
+/// * `account` - `Key` -> Address of the account.
 #[no_mangle]
-pub extern "C" fn renounce_ownership() {
-    _transfer_ownership(Key::Account(AccountHash::default()), true);
+pub extern "C" fn revoke_role() {
+    let role: Key = runtime::get_named_arg("role");
+    let account: Key = runtime::get_named_arg("account");
+
+    _revoke_role(role, account);
+}
+
+/// # Purpose
+/// * Renounce role
+/// # Arguments
+/// * `role` - `U256` -> Role.
+/// * `account` - `Key` -> Address of the account.
+#[no_mangle]
+pub extern "C" fn renounce_role() {
+    let role: Key = runtime::get_named_arg("role");
+    let account: Key = runtime::get_named_arg("account");
+
+    _renounce_role(role, account);
 }
 
 #[no_mangle]
 pub extern "C" fn call() {
     let entry_points = entry_points::default();
 
-    _transfer_ownership(get_caller(), false);
+    _grant_role(get_caller(), false);
 
     let mut named_keys = NamedKeys::new();
 
@@ -85,7 +116,7 @@ pub extern "C" fn call() {
 }
 
 
-fn _transfer_ownership(new_owner: Key, check_permission: bool) {
+fn _grant_role(new_owner: Key, check_permission: bool) {
     let old_owner = get_key::<Key>("owner")
 
     if check_permission && old_owner != get_caller() {

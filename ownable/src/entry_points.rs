@@ -30,7 +30,7 @@ pub fn renounce_ownership() -> EntryPoint {
     endpoint("renounce_ownership", vec![], CLType::Unit)
 }
 
-/// Returns the default set of ERC20 entry points.
+/// Returns the default set of Ownable entry points.
 pub fn default() -> EntryPoints {
     let mut entry_points = EntryPoints::new();
     entry_points.add_entry_point(owner());

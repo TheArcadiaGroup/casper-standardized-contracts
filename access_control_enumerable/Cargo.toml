@@ -1,6 +1,6 @@
 [package]
-name = "ownable"
-description = "Casper Ownable contract"
+name = "access_control_enumerable"
+description = "Casper AccessControlEnumerable contract"
 version = "0.1.0"
 authors = ["Arcadia Group"]
 edition = "2018"
@@ -15,7 +15,7 @@ base64 = { version = "0.13.0", default-features = false, features = ["alloc"] }
 libs = { path = "../libs" }
 
 [[bin]]
-name = "ownable"
+name = "access_control_enumerable"
 path = "src/main.rs"
 bench = false
 doctest = false

@@ -16,7 +16,7 @@ pub enum OwnableEvent {
 impl OwnableEvent {
     pub fn type_name(&self) -> String {
         match self {
-            ERC20Event::OwnershipTransferred {
+            OwnableEvent::OwnershipTransferred {
                 old_owner: _,
                 new_owner: _,
             } => "ownership_transferred",

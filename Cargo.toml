@@ -1,10 +1,7 @@
 [workspace]
 members = [
-    "erc20",
-    "libs",
-    "factory",
-    "pair",
-    "tests"
+    "ownable",
+    "access_control"
 ]
 
 # enable overflow checks to make it behave like we used SafeMath in solidity
