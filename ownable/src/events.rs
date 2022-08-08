@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use contract::contract_api::storage;
-use types::{ContractPackageHash, Key, URef, U256};
+use types::{ContractPackageHash, Key, URef};
 
 use crate::get_key;
 
@@ -29,17 +29,17 @@ pub fn contract_package_hash() -> ContractPackageHash {
     get_key::<ContractPackageHash>("contract_package_hash")
 }
 
-pub(crate) fn emit(event: &OwnableEvent) {
+pub(crate) fn emit(ownable_event: &OwnableEvent) {
     let mut events = Vec::new();
     let package = contract_package_hash();
-    match event {
+    match ownable_event {
         OwnableEvent::OwnershipTransferred {
             old_owner,
             new_owner,
         } => {
             let mut event = BTreeMap::new();
             event.insert("contract_package_hash", package.to_string());
-            event.insert("event_type", event.type_name());
+            event.insert("event_type", ownable_event.type_name());
             event.insert("old_owner", old_owner.to_string());
             event.insert("new_owner", new_owner.to_string());
             events.push(event);

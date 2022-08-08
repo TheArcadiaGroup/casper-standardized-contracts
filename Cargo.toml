@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "ownable",
-    "access_control"
+    "access_control",
+    "tests"
 ]
 
 # enable overflow checks to make it behave like we used SafeMath in solidity

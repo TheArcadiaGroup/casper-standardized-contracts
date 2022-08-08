@@ -69,29 +69,20 @@ pub extern "C" fn call() {
     // Add new version to the package.
     let (contract_hash, _) =
         storage::add_contract_version(contract_package_hash, entry_points, named_keys);
-    runtime::put_key(&token_name, contract_hash.into());
-    runtime::put_key(
-        [&token_name, "_hash"].join("").as_str(),
-        storage::new_uref(contract_hash).into(),
-    );
-    runtime::put_key(
-        [&token_name, "_package_hash"].join("").as_str(),
-        contract_package_hash.into(),
-    );
-    runtime::put_key(
-        [&token_name, "_access_token"].join("").as_str(),
-        access_uref.into(),
-    );
+    runtime::put_key(&"ownable", contract_hash.into());
+    runtime::put_key(&"ownable_hash", storage::new_uref(contract_hash).into());
+    runtime::put_key(&"ownable_package_hash", contract_package_hash.into());
+    runtime::put_key(&"ownable_access_token", access_uref.into());
 }
 
-
 fn _transfer_ownership(new_owner: Key, check_permission: bool) {
-    let old_owner = get_key::<Key>("owner")
+    let old_owner =
+        get_optional_key::<Key>("owner").unwrap_or(Key::Account(AccountHash::default()));
 
     if check_permission && old_owner != get_caller() {
         runtime::revert(Error::CannotMintToZeroHash);
     }
-    set_key("owner", new_owner)
+    set_key("owner", new_owner);
 
     events::emit(&OwnableEvent::OwnershipTransferred {
         old_owner,
@@ -101,6 +92,16 @@ fn _transfer_ownership(new_owner: Key, check_permission: bool) {
 
 fn ret<T: CLTyped + ToBytes>(value: T) {
     runtime::ret(CLValue::from_t(value).unwrap_or_revert())
+}
+
+fn get_optional_key<T: FromBytes + CLTyped>(name: &str) -> Option<T> {
+    match runtime::get_key(name) {
+        None => None,
+        Some(value) => {
+            let key = value.try_into().unwrap_or_revert();
+            storage::read(key).unwrap_or_revert().unwrap_or_revert()
+        }
+    }
 }
 
 fn get_key<T: FromBytes + CLTyped + Default>(name: &str) -> T {
