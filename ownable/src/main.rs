@@ -4,7 +4,6 @@
 
 extern crate alloc;
 
-use alloc::{string::String, vec::Vec};
 use core::convert::TryInto;
 
 use contract::{
@@ -20,7 +19,7 @@ use types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::NamedKeys,
     system::CallStackElement,
-    ApiError, CLTyped, CLValue, Key, URef, U256,
+    CLTyped, CLValue, Key, URef,
 };
 pub mod entry_points;
 pub mod events;
@@ -28,9 +27,10 @@ use events::OwnableEvent;
 
 /// # Purpose
 /// * Returns the `owner` property.
+#[cfg(not(feature = "no_owner"))]
 #[no_mangle]
 pub extern "C" fn owner() {
-    let owner: String = get_key("owner");
+    let owner: Key = get_optional_key("owner").unwrap_or(Key::Account(AccountHash::default()));
     ret(owner)
 }
 
@@ -54,13 +54,14 @@ pub extern "C" fn renounce_ownership() {
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let entry_points = entry_points::default();
+    let owner: Key = runtime::get_named_arg("owner");
 
-    _transfer_ownership(get_caller(), false);
+    let entry_points = entry_points::default();
 
     let mut named_keys = NamedKeys::new();
 
     let (contract_package_hash, access_uref) = create_contract_package_at_hash();
+    named_keys.insert("owner".to_string(), storage::new_uref(owner.clone()).into());
     named_keys.insert(
         "contract_package_hash".to_string(),
         storage::new_uref(contract_package_hash).into(),
@@ -69,10 +70,12 @@ pub extern "C" fn call() {
     // Add new version to the package.
     let (contract_hash, _) =
         storage::add_contract_version(contract_package_hash, entry_points, named_keys);
-    runtime::put_key(&"ownable", contract_hash.into());
-    runtime::put_key(&"ownable_hash", storage::new_uref(contract_hash).into());
-    runtime::put_key(&"ownable_package_hash", contract_package_hash.into());
-    runtime::put_key(&"ownable_access_token", access_uref.into());
+    runtime::put_key(&"Ownable", contract_hash.into());
+    runtime::put_key(&"Ownable_hash", storage::new_uref(contract_hash).into());
+    runtime::put_key(&"Ownable_package_hash", contract_package_hash.into());
+    runtime::put_key(&"Ownable_access_token", access_uref.into());
+
+    // _transfer_ownership(owner, false);
 }
 
 fn _transfer_ownership(new_owner: Key, check_permission: bool) {
@@ -98,8 +101,8 @@ fn get_optional_key<T: FromBytes + CLTyped>(name: &str) -> Option<T> {
     match runtime::get_key(name) {
         None => None,
         Some(value) => {
-            let key = value.try_into().unwrap_or_revert();
-            storage::read(key).unwrap_or_revert().unwrap_or_revert()
+            let key: URef = value.try_into().unwrap_or_revert();
+            storage::read(key).unwrap_or(None)
         }
     }
 }

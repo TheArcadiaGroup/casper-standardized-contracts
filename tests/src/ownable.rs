@@ -1,4 +1,4 @@
-use crate::utilities::{get_current_time, key_to_str};
+use crate::utilities::get_current_time;
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
     DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_ACCOUNT_PUBLIC_KEY, DEFAULT_AUCTION_DELAY,
@@ -12,31 +12,15 @@ use casper_execution_engine::core::engine_state::{
     run_genesis_request::RunGenesisRequest,
 };
 use casper_types::{
-    account::AccountHash,
-    bytesrepr::{FromBytes, ToBytes},
-    runtime_args, CLTyped, ContractHash, Key, Motes, PublicKey, RuntimeArgs, SecretKey,
-    StoredValue, U256,
+    account::AccountHash, bytesrepr::FromBytes, runtime_args, CLTyped, ContractHash, Key, Motes,
+    PublicKey, RuntimeArgs, SecretKey,
 };
 use rand::Rng;
 use std::path::PathBuf;
 
 // contains methods that can simulate a real-world deployment (storing the contract in the blockchain)
 // and transactions to invoke the methods in the contract.
-
-pub mod token_cfg {
-    use super::*;
-    pub const NAME: &str = "ERC20";
-    pub const SYMBOL: &str = "ERC";
-    pub const DECIMALS: u8 = 8;
-    pub fn total_supply() -> U256 {
-        1_000.into()
-    }
-}
-
-pub const OWNABLE_CONTRACT_KEY_NAME: &str = "ownable_contract";
-
-const BALANCES_DICT: &str = "balances";
-const ALLOWANCES_DICT: &str = "allowances";
+pub const OWNABLE_CONTRACT_KEY_NAME: &str = "Ownable";
 
 pub struct Sender(pub AccountHash);
 pub type Hash = [u8; 32];
@@ -137,7 +121,7 @@ impl Config {
         // deploy the contract.
         builder.exec(execute_request).commit().expect_success();
 
-        // // retrieving hashes & post-assertions after the contract deployment.
+        // retrieving hashes & post-assertions after the contract deployment.
         let contract_hash = builder
             .get_account(deployer.to_account_hash())
             .expect("should have account")
@@ -148,7 +132,7 @@ impl Config {
             .expect("should have contract hash")
             .value();
 
-        // assert_ne!(contract_hash, [0u8; 32]);
+        assert_ne!(contract_hash, [0u8; 32]);
 
         (builder, contract_hash)
     }
@@ -163,7 +147,7 @@ pub struct Ownable {
 }
 
 impl Ownable {
-    pub fn deployed() -> Option<Ownable> {
+    pub fn deployed() -> Ownable {
         // ====================== ACCOUNTS SETUP ======================
         let ali = PublicKey::from(&SecretKey::ed25519_from_bytes([3u8; 32]).unwrap());
         let bob = PublicKey::from(&SecretKey::ed25519_from_bytes([6u8; 32]).unwrap());
@@ -191,7 +175,9 @@ impl Ownable {
 
         // ====================== CONTRACT DEPLOYMENT ======================
         let session_code = PathBuf::from("ownable.wasm");
-        let session_args = runtime_args! {};
+        let session_args = runtime_args! {
+            "owner" => Key::Account(ali.to_account_hash())
+        };
 
         let (builder, hash) = Config::deploy_contract(
             builder,
@@ -200,16 +186,15 @@ impl Ownable {
             ali.clone(),
             OWNABLE_CONTRACT_KEY_NAME.to_string(),
         );
-        return None;
 
-        // // ====================== FUNCTION RETURN ======================
-        // Ownable {
-        //     builder,
-        //     hash,
-        //     ali: ali.to_account_hash(),
-        //     bob: bob.to_account_hash(),
-        //     joe: joe.to_account_hash(),
-        // }
+        // ====================== FUNCTION RETURN ======================
+        Ownable {
+            builder,
+            hash,
+            ali: ali.to_account_hash(),
+            bob: bob.to_account_hash(),
+            joe: joe.to_account_hash(),
+        }
     }
 
     /// query a contract's named key.
@@ -219,50 +204,6 @@ impl Ownable {
             Key::Account(self.ali),
             &[OWNABLE_CONTRACT_KEY_NAME.to_string(), name.to_string()],
         ) {
-            Err(_) => None,
-            Ok(maybe_value) => {
-                let value = maybe_value
-                    .as_cl_value()
-                    .expect("should be cl value.")
-                    .clone()
-                    .into_t()
-                    .expect("should have the correct type.");
-                Some(value)
-            }
-        }
-    }
-
-    fn query_dictionary_value<T: CLTyped + FromBytes>(
-        &self,
-        dict_name: &str,
-        key: String,
-    ) -> Option<T> {
-        // prepare the dictionary seed uref.
-        let stored_value = self
-            .builder
-            .query(None, Key::Hash(self.hash), &[])
-            .map_err(|_| "error")
-            .unwrap();
-
-        // get the named keys of the given Key.
-        let named_keys = match &stored_value {
-            StoredValue::Account(account) => account.named_keys(),
-            StoredValue::Contract(contract) => contract.named_keys(),
-            _ => return None,
-        };
-
-        // get the dictionary uref.
-        let dictionary_uref = named_keys.get(dict_name).and_then(Key::as_uref).unwrap();
-
-        let dictionary_key_bytes = key.as_bytes();
-
-        let _address = Key::dictionary(*dictionary_uref, dictionary_key_bytes);
-
-        // query the dictionary.
-        match self
-            .builder
-            .query_dictionary_item(None, *dictionary_uref, &key)
-        {
             Err(_) => None,
             Ok(maybe_value) => {
                 let value = maybe_value
@@ -299,58 +240,21 @@ impl Ownable {
         self.builder.exec(execute_request).commit().expect_success();
     }
 
-    pub fn name(&self) -> String {
-        self.query_contract("name").unwrap()
+    pub fn owner(&self) -> Key {
+        self.query_contract("owner").unwrap()
     }
 
-    pub fn symbol(&self) -> String {
-        self.query_contract("symbol").unwrap()
-    }
-
-    pub fn decimals(&self) -> u8 {
-        self.query_contract("decimals").unwrap()
-    }
-
-    pub fn total_supply(&self) -> U256 {
-        self.query_contract("total_supply").unwrap()
-    }
-
-    pub fn balance_of(&self, address: Key) -> U256 {
-        self.query_dictionary_value(BALANCES_DICT, key_to_str(&address))
-            .unwrap()
-    }
-
-    pub fn transfer(&mut self, recipient: Key, amount: U256, sender: Sender) {
+    pub fn transfer_ownership(&mut self, new_owner: Key, sender: Sender) {
         self.call(
             sender,
-            "transfer",
+            "transfer_ownership",
             runtime_args! {
-                "recipient" => recipient,
-                "amount" => amount
+                "new_owner" => new_owner
             },
         );
     }
 
-    pub fn approve(&mut self, spender: Key, amount: U256, sender: Sender) {
-        self.call(
-            sender,
-            "approve",
-            runtime_args! {
-                "spender" => spender,
-                "amount" => amount
-            },
-        );
-    }
-
-    pub fn transfer_from(&mut self, owner: Key, recipient: Key, amount: U256, sender: Sender) {
-        self.call(
-            sender,
-            "transfer_from",
-            runtime_args! {
-                "owner" => owner,
-                "recipient" => recipient,
-                "amount" => amount
-            },
-        );
+    pub fn renounce_ownership(&mut self, sender: Sender) {
+        self.call(sender, "renounce_ownership", runtime_args! {});
     }
 }
