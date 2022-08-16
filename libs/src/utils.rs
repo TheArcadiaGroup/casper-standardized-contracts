@@ -1,23 +1,21 @@
 #![allow(unused_parens)]
 #![allow(non_snake_case)]
-#![no_main]
 
 extern crate alloc;
 
 use contract::{
     contract_api::{
         runtime,
-        storage::{self, create_contract_package_at_hash},
+        storage::{self},
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
 use core::convert::TryInto;
 use types::{
-    account::AccountHash,
     bytesrepr::{FromBytes, ToBytes},
-    contracts::NamedKeys,
     system::CallStackElement,
-    CLTyped, CLValue, ContractPackageHash, Key, URef,
+    CLType, CLTyped, CLValue, ContractPackageHash, EntryPoint, EntryPointAccess, EntryPointType,
+    Key, Parameter, URef,
 };
 
 use crate::error::Error;
@@ -83,4 +81,14 @@ pub fn get_caller() -> Key {
 
 pub fn contract_package_hash() -> ContractPackageHash {
     get_key::<ContractPackageHash>("contract_package_hash")
+}
+
+pub fn endpoint(name: &str, param: Vec<Parameter>, ret: CLType) -> EntryPoint {
+    EntryPoint::new(
+        String::from(name),
+        param,
+        ret,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    )
 }

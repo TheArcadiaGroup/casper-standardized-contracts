@@ -8,7 +8,7 @@ use contract::contract_api::{
     runtime,
     storage::{self, create_contract_package_at_hash},
 };
-use libs::access::ownable::OwnableLib;
+use libs::access::ownable;
 use types::{contracts::NamedKeys, EntryPoints, Key};
 
 /// # Purpose
@@ -16,7 +16,7 @@ use types::{contracts::NamedKeys, EntryPoints, Key};
 #[cfg(not(feature = "no_owner"))]
 #[no_mangle]
 pub extern "C" fn owner() {
-    OwnableLib::ret_owner()
+    ownable::ret_owner()
 }
 
 /// # Purpose
@@ -25,14 +25,14 @@ pub extern "C" fn owner() {
 /// * `new_owner` - `Key` -> Address of the new owner.
 #[no_mangle]
 pub extern "C" fn transfer_ownership() {
-    OwnableLib::transfer_ownership();
+    ownable::transfer_ownership();
 }
 
 /// # Purpose
 /// * Renounce ownership of contract.
 #[no_mangle]
 pub extern "C" fn renounce_ownership() {
-    OwnableLib::renounce_ownership();
+    ownable::renounce_ownership();
 }
 
 #[no_mangle]
@@ -41,7 +41,7 @@ pub extern "C" fn call() {
 
     let mut entry_points = EntryPoints::new();
 
-    OwnableLib::set_entry_points(&mut entry_points);
+    ownable::set_entry_points(&mut entry_points);
 
     let mut named_keys = NamedKeys::new();
 
