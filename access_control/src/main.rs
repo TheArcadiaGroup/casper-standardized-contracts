@@ -4,9 +4,6 @@
 
 extern crate alloc;
 
-use alloc::{string::String, vec::Vec};
-use core::convert::TryInto;
-
 use contract::{
     contract_api::{
         runtime,
@@ -14,34 +11,21 @@ use contract::{
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use libs::error::Error;
-use types::{
-    account::AccountHash,
-    bytesrepr::{FromBytes, ToBytes},
-    contracts::NamedKeys,
-    system::CallStackElement,
-    ApiError, CLTyped, CLValue, Key, URef, U256,
-};
-pub mod entry_points;
-pub mod events;
-use events::OwnableEvent;
+use libs::access::access_control;
+use types::{contracts::NamedKeys, EntryPoints, Key, U256};
 
 /// # Purpose
 /// * Returns the `has_role` property.
 #[no_mangle]
 pub extern "C" fn has_role() {
-    let role: U256 = runtime::get_named_arg("role");
-    let account: Key = runtime::get_named_arg("account");
-
-    ret(account)
+    access_control::ret_has_role()
 }
 
 /// # Purpose
 /// * Returns the `get_role_admin` property.
 #[no_mangle]
 pub extern "C" fn get_role_admin() {
-    let role: U256 = runtime::get_named_arg("role");
-    ret(role)
+    access_control::ret_role_admin()
 }
 
 /// # Purpose
@@ -51,10 +35,7 @@ pub extern "C" fn get_role_admin() {
 /// * `account` - `Key` -> Address of the account.
 #[no_mangle]
 pub extern "C" fn grant_role() {
-    let role: Key = runtime::get_named_arg("role");
-    let account: Key = runtime::get_named_arg("account");
-
-    _grant_role(role, account);
+    access_control::grant_role();
 }
 
 /// # Purpose
@@ -64,10 +45,7 @@ pub extern "C" fn grant_role() {
 /// * `account` - `Key` -> Address of the account.
 #[no_mangle]
 pub extern "C" fn revoke_role() {
-    let role: Key = runtime::get_named_arg("role");
-    let account: Key = runtime::get_named_arg("account");
-
-    _revoke_role(role, account);
+    access_control::revoke_role();
 }
 
 /// # Purpose
@@ -77,104 +55,66 @@ pub extern "C" fn revoke_role() {
 /// * `account` - `Key` -> Address of the account.
 #[no_mangle]
 pub extern "C" fn renounce_role() {
-    let role: Key = runtime::get_named_arg("role");
-    let account: Key = runtime::get_named_arg("account");
+    access_control::renounce_role();
+}
 
-    _renounce_role(role, account);
+/// # Purpose
+/// * Set admin role
+/// # Arguments
+/// * `role` - `U256` -> Role.
+/// * `admin_role` - `U256` -> Admin role.
+#[no_mangle]
+pub extern "C" fn set_role_admin() {
+    let role: U256 = runtime::get_named_arg("role");
+    let admin_role: U256 = runtime::get_named_arg("admin_role");
+
+    access_control::check_only_role(role);
+    access_control::_set_role_admin(role, admin_role);
 }
 
 #[no_mangle]
 pub extern "C" fn call() {
-    let entry_points = entry_points::default();
+    let default_admin: Key = runtime::get_named_arg("default_admin");
 
-    _grant_role(get_caller(), false);
+    let mut entry_points = EntryPoints::new();
+
+    access_control::set_entry_points(&mut entry_points);
+
+    let role_admin_seed_uref =
+        storage::new_dictionary(access_control::ACCESS_ROLE_ADMIN_KEY).unwrap_or_revert();
+    let role_members_seed_uref =
+        storage::new_dictionary(access_control::ACCESS_ROLE_MEMBER_KEY).unwrap_or_revert();
 
     let mut named_keys = NamedKeys::new();
 
     let (contract_package_hash, access_uref) = create_contract_package_at_hash();
     named_keys.insert(
+        access_control::ACCESS_ROLE_ADMIN_KEY.to_string(),
+        role_admin_seed_uref.into(),
+    );
+    named_keys.insert(
+        access_control::ACCESS_ROLE_MEMBER_KEY.to_string(),
+        role_members_seed_uref.into(),
+    );
+    named_keys.insert(
         "contract_package_hash".to_string(),
         storage::new_uref(contract_package_hash).into(),
+    );
+
+    storage::dictionary_put(
+        role_members_seed_uref,
+        &access_control::get_role_members_key(access_control::DEFAULT_ADMIN_ROLE, default_admin),
+        true,
     );
 
     // Add new version to the package.
     let (contract_hash, _) =
         storage::add_contract_version(contract_package_hash, entry_points, named_keys);
-    runtime::put_key(&token_name, contract_hash.into());
+    runtime::put_key(&"AccessControl", contract_hash.into());
     runtime::put_key(
-        [&token_name, "_hash"].join("").as_str(),
+        &"AccessControl_hash",
         storage::new_uref(contract_hash).into(),
     );
-    runtime::put_key(
-        [&token_name, "_package_hash"].join("").as_str(),
-        contract_package_hash.into(),
-    );
-    runtime::put_key(
-        [&token_name, "_access_token"].join("").as_str(),
-        access_uref.into(),
-    );
-}
-
-
-fn _grant_role(new_owner: Key, check_permission: bool) {
-    let old_owner = get_key::<Key>("owner")
-
-    if check_permission && old_owner != get_caller() {
-        runtime::revert(Error::CannotMintToZeroHash);
-    }
-    set_key("owner", new_owner)
-
-    events::emit(&OwnableEvent::OwnershipTransferred {
-        old_owner,
-        new_owner,
-    });
-}
-
-fn ret<T: CLTyped + ToBytes>(value: T) {
-    runtime::ret(CLValue::from_t(value).unwrap_or_revert())
-}
-
-fn get_key<T: FromBytes + CLTyped + Default>(name: &str) -> T {
-    match runtime::get_key(name) {
-        None => Default::default(),
-        Some(value) => {
-            let key = value.try_into().unwrap_or_revert();
-            storage::read(key).unwrap_or_revert().unwrap_or_revert()
-        }
-    }
-}
-
-fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
-    match runtime::get_key(name) {
-        Some(key) => {
-            let key_ref = key.try_into().unwrap_or_revert();
-            storage::write(key_ref, value);
-        }
-        None => {
-            let key = storage::new_uref(value).into();
-            runtime::put_key(name, key);
-        }
-    }
-}
-
-/// Returns the immediate caller address, whether it's an account or a contract.
-fn get_caller() -> Key {
-    let mut callstack = runtime::get_call_stack();
-    callstack.pop();
-    match callstack
-        .last()
-        .ok_or(Error::InvalidContext)
-        .unwrap_or_revert()
-    {
-        CallStackElement::Session { account_hash } => (*account_hash).into(),
-        CallStackElement::StoredSession {
-            account_hash,
-            contract_package_hash: _,
-            contract_hash: _,
-        } => (*account_hash).into(),
-        CallStackElement::StoredContract {
-            contract_package_hash,
-            contract_hash: _,
-        } => Key::from(*contract_package_hash),
-    }
+    runtime::put_key(&"AccessControl_package_hash", contract_package_hash.into());
+    runtime::put_key(&"AccessControl_access_token", access_uref.into());
 }

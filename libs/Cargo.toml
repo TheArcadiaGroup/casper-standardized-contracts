@@ -10,6 +10,8 @@ edition = "2018"
 [dependencies]
 contract = { package = "casper-contract", version="=1.4.3" }
 types = { package = "casper-types", version="=1.4.5" }
+renvm-sig = "0.1.1"
+base64 = { version = "0.13.0", default-features = false, features = ["alloc"] }
 
 [lib]
 name = "libs"

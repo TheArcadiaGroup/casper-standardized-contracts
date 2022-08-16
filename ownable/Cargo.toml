@@ -2,7 +2,7 @@
 name = "ownable"
 description = "Casper Ownable contract"
 version = "0.1.0"
-authors = ["Arcadia Group"]
+authors = ["The Arcadia Group"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,8 +10,6 @@ edition = "2018"
 [dependencies]
 contract = { package = "casper-contract", version="=1.4.3" }
 types = { package = "casper-types", version="=1.4.5" }
-hex = "0.4.3"
-base64 = { version = "0.13.0", default-features = false, features = ["alloc"] }
 libs = { path = "../libs" }
 
 [[bin]]
