@@ -2,7 +2,8 @@
 members = [
     "ownable",
     "access_control",
-    "tests"
+    "tests",
+    "libs"
 ]
 
 # enable overflow checks to make it behave like we used SafeMath in solidity

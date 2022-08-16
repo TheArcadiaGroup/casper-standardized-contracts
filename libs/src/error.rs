@@ -12,10 +12,10 @@ use types::ApiError;
 /// Such a user error should be in the range `[0..(u16::MAX - 30)]` (i.e. [0, 65505]) to avoid
 /// conflicting with the other `Error` variants.
 pub enum Error {
-    /// ERC20 contract called from within an invalid context.
-    InvalidContext,
+    /// Caller does not have permission
+    InvalidPermission,
     /// Spender does not have enough balance.
-    InsufficientBalance,
+    InvalidContext,
     /// Spender does not have enough allowance approved.
     InsufficientAllowance,
     /// Operation would cause an integer overflow.
@@ -79,8 +79,8 @@ pub enum Error {
 }
 
 // u16::MAX = 65535
-const ERROR_INVALID_CONTEXT: u16 = u16::MAX; // 65535
-const ERROR_INSUFFICIENT_BALANCE: u16 = u16::MAX - 1; // 65534
+const ERROR_INVALID_PERMISSION: u16 = u16::MAX; // 65535
+const ERROR_INVALID_CONTEXT: u16 = u16::MAX - 1; // 65534
 const ERROR_INSUFFICIENT_ALLOWANCE: u16 = u16::MAX - 2; // 65533
 const ERROR_OVERFLOW: u16 = u16::MAX - 3; // 65532
 const ERROR_IDENTICAL_ADDRESSES: u16 = u16::MAX - 4; // 65531
@@ -114,8 +114,8 @@ const ERROR_INVALID_DEPOSIT_ENTRY_POINT_NAME: u16 = u16::MAX - 30; // 65505
 impl From<Error> for ApiError {
     fn from(error: Error) -> Self {
         let user_error = match error {
+            Error::InvalidPermission => ERROR_INVALID_PERMISSION,
             Error::InvalidContext => ERROR_INVALID_CONTEXT,
-            Error::InsufficientBalance => ERROR_INSUFFICIENT_BALANCE,
             Error::InsufficientAllowance => ERROR_INSUFFICIENT_ALLOWANCE,
             Error::Overflow => ERROR_OVERFLOW,
             Error::IdenticalAddresses => ERROR_IDENTICAL_ADDRESSES,

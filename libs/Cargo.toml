@@ -1,21 +1,15 @@
 [package]
 name = "libs"
-description = "Uniswap v2 libraries written in Rust"
+description = "Casper standard libraries"
 version = "0.1.0"
-authors = ["FriendlyMarket <team@friendly.market>"]
+authors = ["The Arcadia Group"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+contract = { package = "casper-contract", version="=1.4.3" }
 types = { package = "casper-types", version="=1.4.5" }
-solid = "0.1.5"
-libsecp256k1 = "0.6.0"
-getrandom = { version = "0.2", features = ["js"] }
-
-[dev-dependencies]
-rustc-hex = "2.1.0"
-hex = "0.4.3"
 
 [lib]
 name = "libs"
