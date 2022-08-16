@@ -92,3 +92,32 @@ pub fn endpoint(name: &str, param: Vec<Parameter>, ret: CLType) -> EntryPoint {
         EntryPointType::Contract,
     )
 }
+
+fn get_dictionary_seed_uref(name: &str) -> URef {
+    match runtime::get_key(name) {
+        Some(key) => key.into_uref().unwrap_or_revert(),
+        None => {
+            let new_dict = storage::new_dictionary(name).unwrap_or_revert();
+            let key = storage::new_uref(new_dict).into();
+            runtime::put_key(name, key);
+            new_dict
+        }
+    }
+}
+
+pub fn get<T: FromBytes + CLTyped + Default>(dictionary_name: &str, key: &str) -> T {
+    let dictionary_seed_uref = get_dictionary_seed_uref(dictionary_name);
+    storage::dictionary_get(dictionary_seed_uref, key)
+        .unwrap_or_default()
+        .unwrap_or_default()
+}
+
+pub fn set<T: ToBytes + CLTyped>(dictionary_name: &str, key: &str, value: T) {
+    let dictionary_seed_uref = get_dictionary_seed_uref(dictionary_name);
+    storage::dictionary_put(dictionary_seed_uref, key, value)
+}
+
+pub fn key_to_str(key: &Key) -> String {
+    let preimage = key.to_bytes().unwrap_or_revert();
+    base64::encode(&preimage)
+}

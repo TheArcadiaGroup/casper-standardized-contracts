@@ -32,6 +32,7 @@ impl OwnableEntryPoints {
         endpoint("renounce_ownership", vec![], CLType::Unit)
     }
 }
+
 pub enum OwnableEvent {
     OwnershipTransferred { old_owner: Key, new_owner: Key },
 }
@@ -47,8 +48,6 @@ impl OwnableEvent {
         .to_string()
     }
 }
-
-pub struct OwnableLib {}
 
 pub fn set_entry_points(current_entry_points: &mut EntryPoints) -> &EntryPoints {
     current_entry_points.add_entry_point(OwnableEntryPoints::owner());
@@ -98,9 +97,14 @@ pub fn renounce_ownership() {
     _transfer_ownership(Key::Account(AccountHash::default()), true);
 }
 
+pub fn check_only_owner() {
+    if owner() != get_caller() {
+        runtime::revert(Error::InvalidPermission);
+    }
+}
+
 fn _transfer_ownership(new_owner: Key, check_permission: bool) {
-    let old_owner =
-        get_optional_key::<Key>("owner").unwrap_or(Key::Account(AccountHash::default()));
+    let old_owner = owner();
 
     if check_permission && old_owner != get_caller() {
         runtime::revert(Error::CannotMintToZeroHash);
