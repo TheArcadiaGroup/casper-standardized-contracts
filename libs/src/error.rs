@@ -24,8 +24,8 @@ pub enum Error {
     IdenticalAddresses,
     /// Tokens address is null.
     ZeroAddress,
-    /// At least one of the pool's reserves is empty.
-    InsufficientLiquidity,
+    /// Insufficient balance
+    InsufficientBalance,
     /// Input amount for the swap is null.
     InsufficientInputAmount,
     /// Output amount for the swap is null.
@@ -85,7 +85,7 @@ const ERROR_INSUFFICIENT_ALLOWANCE: u16 = u16::MAX - 2; // 65533
 const ERROR_OVERFLOW: u16 = u16::MAX - 3; // 65532
 const ERROR_IDENTICAL_ADDRESSES: u16 = u16::MAX - 4; // 65531
 const ERROR_ZERO_ADDRESS: u16 = u16::MAX - 5; // 65530
-const ERROR_INSUFFICIENT_LIQUIDITY: u16 = u16::MAX - 6; // 65529
+const ERROR_INSUFFICIENT_BALANCE: u16 = u16::MAX - 6; // 65529
 const ERROR_INSUFFICIENT_INPUT_AMOUNT: u16 = u16::MAX - 7; // 65528
 const ERROR_INSUFFICIENT_OUTPUT_AMOUNT: u16 = u16::MAX - 8; // 65527
 const ERROR_INSUFFICIENT_AMOUNT: u16 = u16::MAX - 9; // 65526
@@ -120,7 +120,7 @@ impl From<Error> for ApiError {
             Error::Overflow => ERROR_OVERFLOW,
             Error::IdenticalAddresses => ERROR_IDENTICAL_ADDRESSES,
             Error::ZeroAddress => ERROR_ZERO_ADDRESS,
-            Error::InsufficientLiquidity => ERROR_INSUFFICIENT_LIQUIDITY,
+            Error::InsufficientBalance => ERROR_INSUFFICIENT_BALANCE,
             Error::InsufficientInputAmount => ERROR_INSUFFICIENT_INPUT_AMOUNT,
             Error::InsufficientOutputAmount => ERROR_INSUFFICIENT_OUTPUT_AMOUNT,
             Error::InsufficientAmount => ERROR_INSUFFICIENT_AMOUNT,
