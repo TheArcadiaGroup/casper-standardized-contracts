@@ -1,3 +1,7 @@
+use blake2::{
+    digest::{Update, VariableOutput},
+    VarBlake2b,
+};
 use casper_engine_test_support::{
     DeployItemBuilder, ExecuteRequestBuilder, InMemoryWasmTestBuilder, ARG_AMOUNT,
     DEFAULT_ACCOUNT_INITIAL_BALANCE, DEFAULT_ACCOUNT_PUBLIC_KEY, DEFAULT_AUCTION_DELAY,
@@ -28,9 +32,23 @@ pub fn get_current_time() -> u64 {
     since_the_epoch.as_secs()
 }
 
+pub fn blake2b256(item_key_string: &[u8]) -> Box<[u8]> {
+    let mut hasher = VarBlake2b::new(32).unwrap();
+    hasher.update(item_key_string);
+    hasher.finalize_boxed()
+}
+
 pub fn key_to_str(key: &Key) -> String {
     let preimage = key.to_bytes().unwrap();
     base64::encode(&preimage)
+}
+
+pub fn two_key_to_str(key1: Key, key2: Key) -> String {
+    let mut preimage = Vec::new();
+    preimage.append(&mut key1.to_bytes().unwrap());
+    preimage.append(&mut key2.to_bytes().unwrap());
+    let key_bytes = blake2b256(&preimage);
+    hex::encode(&key_bytes)
 }
 
 pub fn to_key(account: AccountHash) -> Key {
@@ -223,44 +241,42 @@ impl CasperHelper {
         key: String,
     ) -> Option<T> {
         // prepare the dictionary seed uref.
-        // let stored_value = self
-        //     .builder
-        //     .query(None, Key::Hash(hash), &[])
-        //     .map_err(|_| "error")
-        //     .unwrap();
+        let stored_value = self
+            .builder
+            .query(None, Key::Hash(hash), &[])
+            .map_err(|_| "error")
+            .unwrap();
 
-        // // get the named keys of the given Key.
-        // let named_keys = match &stored_value {
-        //     StoredValue::Account(account) => account.named_keys(),
-        //     StoredValue::Contract(contract) => contract.named_keys(),
-        //     _ => return None,
-        // };
+        // get the named keys of the given Key.
+        let named_keys = match &stored_value {
+            StoredValue::Account(account) => account.named_keys(),
+            StoredValue::Contract(contract) => contract.named_keys(),
+            _ => return None,
+        };
 
-        // // get the dictionary uref.
-        // let dictionary_uref = named_keys.get(dict_name).and_then(Key::as_uref).unwrap();
+        // get the dictionary uref.
+        let dictionary_uref = named_keys.get(dict_name).and_then(Key::as_uref).unwrap();
 
-        // let dictionary_key_bytes = key.as_bytes();
+        let dictionary_key_bytes = key.as_bytes();
 
-        // let _address = Key::dictionary(*dictionary_uref, dictionary_key_bytes);
+        let _address = Key::dictionary(*dictionary_uref, dictionary_key_bytes);
 
-        // // query the dictionary.
-        // match self
-        //     .builder
-        //     .query_dictionary_item(None, *dictionary_uref, &key)
-        // {
-        //     Err(_) => None,
-        //     Ok(maybe_value) => {
-        //         let value = maybe_value
-        //             .as_cl_value()
-        //             .expect("should be cl value.")
-        //             .clone()
-        //             .into_t()
-        //             .expect("should have the correct type.");
-        //         Some(value)
-        //     }
-        // }
-
-        None
+        // query the dictionary.
+        match self
+            .builder
+            .query_dictionary_item(None, *dictionary_uref, &key)
+        {
+            Err(_) => None,
+            Ok(maybe_value) => {
+                let value = maybe_value
+                    .as_cl_value()
+                    .expect("should be cl value.")
+                    .clone()
+                    .into_t()
+                    .expect("should have the correct type.");
+                Some(value)
+            }
+        }
     }
 
     /// call a contract's specific entry point.

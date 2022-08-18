@@ -1,9 +1,15 @@
-use contract::contract_api::{
-    runtime,
-    storage::{self},
+use contract::{
+    contract_api::{
+        runtime,
+        storage::{self},
+    },
+    unwrap_or_revert::UnwrapOrRevert,
 };
 use std::collections::BTreeMap;
-use types::{account::AccountHash, CLType, EntryPoint, EntryPoints, Key, Parameter, URef, U256};
+use types::{
+    account::AccountHash, bytesrepr::ToBytes, CLType, EntryPoint, EntryPoints, Key, Parameter,
+    URef, U256,
+};
 
 use crate::{
     error::Error,
@@ -269,8 +275,6 @@ impl ERC20 {
         let amount: U256 = runtime::get_named_arg("amount");
 
         ERC20::_approve(owner, spender, amount);
-
-        ret(true)
     }
 
     pub fn increase_allowance() {
@@ -283,8 +287,6 @@ impl ERC20 {
             spender,
             ERC20::get_allowance(owner, spender) + amount,
         );
-
-        ret(true)
     }
 
     pub fn decrease_allowance() {
@@ -301,8 +303,6 @@ impl ERC20 {
             spender,
             ERC20::get_allowance(owner, spender) - amount,
         );
-
-        ret(true)
     }
 
     pub fn transfer() {
@@ -311,8 +311,6 @@ impl ERC20 {
         let amount: U256 = runtime::get_named_arg("amount");
 
         ERC20::_transfer(from, to, amount);
-
-        ret(true)
     }
 
     pub fn transfer_from() {
@@ -323,11 +321,9 @@ impl ERC20 {
 
         ERC20::_spend_allowance(from, spender, amount);
         ERC20::_transfer(from, to, amount);
-
-        ret(true)
     }
 
-    fn _transfer(from: Key, to: Key, amount: U256) {
+    pub fn _transfer(from: Key, to: Key, amount: U256) {
         if from == Key::Account(AccountHash::default())
             || to == Key::Account(AccountHash::default())
         {
@@ -359,7 +355,7 @@ impl ERC20 {
         });
     }
 
-    fn _mint(to: Key, amount: U256) {
+    pub fn _mint(to: Key, amount: U256) {
         if to == Key::Account(AccountHash::default()) {
             runtime::revert(Error::ZeroAddress);
         }
@@ -381,7 +377,7 @@ impl ERC20 {
         });
     }
 
-    fn _burn(account: Key, amount: U256) {
+    pub fn _burn(account: Key, amount: U256) {
         if account == Key::Account(AccountHash::default()) {
             runtime::revert(Error::ZeroAddress);
         }
@@ -406,7 +402,7 @@ impl ERC20 {
         });
     }
 
-    fn _approve(owner: Key, spender: Key, amount: U256) {
+    pub fn _approve(owner: Key, spender: Key, amount: U256) {
         if owner == Key::Account(AccountHash::default())
             || spender == Key::Account(AccountHash::default())
         {
@@ -426,7 +422,7 @@ impl ERC20 {
         });
     }
 
-    fn _spend_allowance(owner: Key, spender: Key, amount: U256) {
+    pub fn _spend_allowance(owner: Key, spender: Key, amount: U256) {
         let allowance = ERC20::get_allowance(owner, spender);
 
         if allowance != U256::MAX {
@@ -442,6 +438,11 @@ impl ERC20 {
     }
 
     pub fn get_allowances_key(owner: Key, spender: Key) -> String {
-        [key_to_str(&owner), key_to_str(&spender)].join("_")
+        let mut preimage = Vec::new();
+        preimage.append(&mut owner.to_bytes().unwrap_or_revert());
+        preimage.append(&mut spender.to_bytes().unwrap_or_revert());
+
+        let key_bytes = runtime::blake2b(&preimage);
+        hex::encode(&key_bytes)
     }
 }

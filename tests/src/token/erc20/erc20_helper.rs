@@ -1,4 +1,4 @@
-use crate::utilities::{key_to_str, CasperHelper, Hash, Sender};
+use crate::utilities::{key_to_str, to_key, two_key_to_str, CasperHelper, Hash, Sender};
 
 use casper_types::{
     account::AccountHash, runtime_args, CLTyped, ContractHash, Key, Motes, RuntimeArgs, U256,
@@ -12,7 +12,7 @@ pub mod token_cfg {
     pub const SYMBOL: &str = "ERC";
     pub const DECIMALS: u8 = 8;
     pub fn total_supply() -> U256 {
-        U256::from("1000000000000000")
+        U256::from(1000_000_000_000_000u128)
     }
 }
 
@@ -97,5 +97,39 @@ impl Erc20 {
         self.helper
             .query_dictionary_value(self.hash, ERC20::ERC20_BALANCE_KEY, key_to_str(&account))
             .unwrap_or_default()
+    }
+
+    pub fn allowance(&self, owner: Key, spender: Key) -> U256 {
+        self.helper
+            .query_dictionary_value(
+                self.hash,
+                ERC20::ERC20_ALLOWANCE_KEY,
+                two_key_to_str(owner, spender),
+            )
+            .unwrap_or_default()
+    }
+
+    pub fn transfer(&mut self, to: Key, amount: U256, sender: Sender) {
+        self.helper.call(
+            self.hash,
+            sender,
+            "transfer",
+            runtime_args! {
+                "to" => to,
+                "amount" => amount
+            },
+        );
+    }
+
+    pub fn approve(&mut self, spender: Key, amount: U256, sender: Sender) {
+        self.helper.call(
+            self.hash,
+            sender,
+            "approve",
+            runtime_args! {
+                "spender" => spender,
+                "amount" => amount
+            },
+        );
     }
 }

@@ -16,6 +16,8 @@ libsecp256k1 = "0.6.0"
 libs = { path = "../libs" }
 rand = "0.7"
 base64 = { version = "0.13.0", default-features = false, features = ["alloc"] }
+hex = "0.4.3"
+blake2 = "0.9.2"
 
 [features]
 default = ["casper-contract/std", "casper-types/std", "casper-contract/test-support"]

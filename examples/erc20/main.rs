@@ -11,10 +11,7 @@ use contract::{
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use libs::{
-    utils::CONTRACT_PACKAGE_HASH_KEY,
-    {token::erc20::ERC20, utils::key_to_str},
-};
+use libs::{token::erc20::ERC20, utils::CONTRACT_PACKAGE_HASH_KEY};
 use types::{contracts::NamedKeys, EntryPoints, Key, U256};
 
 /// # Purpose
@@ -75,7 +72,7 @@ pub extern "C" fn allowance() {
 /// * `amount` - `U256` -> Amount of the allowance.
 #[no_mangle]
 pub extern "C" fn approve() {
-    ERC20::approve()
+    ERC20::approve();
 }
 
 /// # Purpose
@@ -85,7 +82,7 @@ pub extern "C" fn approve() {
 /// * `amount` - `U256` -> Amount of the tokens to be sent.
 #[no_mangle]
 pub extern "C" fn transfer() {
-    ERC20::transfer()
+    ERC20::transfer();
 }
 
 /// # Purpose
@@ -95,7 +92,7 @@ pub extern "C" fn transfer() {
 /// * `amount` - `U256` -> Amount of the allowance.
 #[no_mangle]
 pub extern "C" fn increase_allowance() {
-    ERC20::increase_allowance()
+    ERC20::increase_allowance();
 }
 
 /// # Purpose
@@ -105,7 +102,7 @@ pub extern "C" fn increase_allowance() {
 /// * `amount` - `U256` -> Amount of the allowance.
 #[no_mangle]
 pub extern "C" fn decrease_allowance() {
-    ERC20::decrease_allowance()
+    ERC20::decrease_allowance();
 }
 
 /// # Purpose
@@ -116,7 +113,7 @@ pub extern "C" fn decrease_allowance() {
 /// * `amount` - `U256` -> Amount of the tokens to be sent.
 #[no_mangle]
 pub extern "C" fn transfer_from() {
-    ERC20::transfer_from()
+    ERC20::transfer_from();
 }
 
 #[no_mangle]
@@ -131,12 +128,6 @@ pub extern "C" fn call() {
     ERC20::set_entry_points(&mut entry_points);
 
     let balances_seed_uref = storage::new_dictionary(ERC20::ERC20_BALANCE_KEY).unwrap_or_revert();
-
-    storage::dictionary_put(
-        balances_seed_uref,
-        &key_to_str(&Key::Account(runtime::get_caller())),
-        token_total_supply,
-    );
 
     let allowances_seed_uref =
         storage::new_dictionary(ERC20::ERC20_ALLOWANCE_KEY).unwrap_or_revert();
@@ -180,4 +171,6 @@ pub extern "C" fn call() {
     runtime::put_key(&"Erc20_hash", storage::new_uref(contract_hash).into());
     runtime::put_key(&"Erc20_package_hash", contract_package_hash.into());
     runtime::put_key(&"Erc20_access_token", access_uref.into());
+
+    ERC20::_mint(Key::Account(runtime::get_caller()), token_total_supply);
 }

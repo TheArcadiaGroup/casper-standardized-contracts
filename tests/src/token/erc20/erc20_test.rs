@@ -1,4 +1,4 @@
-use casper_types::{account::AccountHash, Key};
+use casper_types::{account::AccountHash, Key, U256};
 
 use crate::{
     token::erc20::erc20_helper::{token_cfg, Erc20},
@@ -27,36 +27,83 @@ fn should_deploy() {
     );
 }
 
-// #[test]
-// fn should_transfer_ownership() {
-//     let mut contract = Ownable::deployed();
-//     contract.transfer_ownership(to_key(contract.bob), Sender(contract.ali));
-//     assert_eq!(
-//         contract.owner().to_string(),
-//         Key::Account(contract.bob).to_string()
-//     );
-// }
+#[test]
+fn should_transfer_token() {
+    let mut contract = Erc20::deployed(
+        token_cfg::NAME.to_string(),
+        token_cfg::SYMBOL.to_string(),
+        token_cfg::DECIMALS,
+        token_cfg::total_supply(),
+    );
 
-// #[test]
-// #[should_panic = "Authorization"]
-// fn should_not_transfer_ownership_by_invalid_owner() {
-//     let mut contract = Ownable::deployed();
-//     contract.transfer_ownership(to_key(contract.bob), Sender(contract.joe));
-// }
+    let amount = U256::from(1000_000_000_000u128);
+    contract.transfer(to_key(contract.bob), amount, Sender(contract.ali));
+    assert_eq!(contract.balance_of(to_key(contract.bob)), amount);
+}
 
-// #[test]
-// fn should_renounce_ownership() {
-//     let mut contract = Ownable::deployed();
-//     contract.renounce_ownership(Sender(contract.ali));
-//     assert_eq!(
-//         contract.owner().to_string(),
-//         Key::Account(AccountHash::default()).to_string()
-//     );
-// }
+#[test]
+#[should_panic = "65530"]
+fn should_not_transfer_token_to_zero_address() {
+    let mut contract = Erc20::deployed(
+        token_cfg::NAME.to_string(),
+        token_cfg::SYMBOL.to_string(),
+        token_cfg::DECIMALS,
+        token_cfg::total_supply(),
+    );
 
-// #[test]
-// #[should_panic = "Authorization"]
-// fn should_not_renounce_ownership_by_invalid_owner() {
-//     let mut contract = Ownable::deployed();
-//     contract.renounce_ownership(Sender(contract.joe));
-// }
+    let amount = U256::from(1000_000_000_000u128);
+    contract.transfer(
+        Key::Account(AccountHash::default()),
+        amount,
+        Sender(contract.ali),
+    );
+}
+
+#[test]
+#[should_panic = "65529"]
+fn should_not_transfer_bigger_amount_than_balance() {
+    let mut contract = Erc20::deployed(
+        token_cfg::NAME.to_string(),
+        token_cfg::SYMBOL.to_string(),
+        token_cfg::DECIMALS,
+        token_cfg::total_supply(),
+    );
+
+    let amount = token_cfg::total_supply() + U256::from(10u128);
+    contract.transfer(to_key(contract.bob), amount, Sender(contract.ali));
+}
+
+#[test]
+fn should_approve_token() {
+    let mut contract = Erc20::deployed(
+        token_cfg::NAME.to_string(),
+        token_cfg::SYMBOL.to_string(),
+        token_cfg::DECIMALS,
+        token_cfg::total_supply(),
+    );
+
+    let amount = U256::from(1000_000_000_000u128);
+    contract.approve(to_key(contract.bob), amount, Sender(contract.ali));
+    assert_eq!(
+        contract.allowance(to_key(contract.ali), to_key(contract.bob)),
+        amount
+    );
+}
+
+#[test]
+#[should_panic = "65530"]
+fn should_not_approve_token_to_zero_address() {
+    let mut contract = Erc20::deployed(
+        token_cfg::NAME.to_string(),
+        token_cfg::SYMBOL.to_string(),
+        token_cfg::DECIMALS,
+        token_cfg::total_supply(),
+    );
+
+    let amount = U256::from(1000_000_000_000u128);
+    contract.approve(
+        Key::Account(AccountHash::default()),
+        amount,
+        Sender(contract.ali),
+    );
+}
