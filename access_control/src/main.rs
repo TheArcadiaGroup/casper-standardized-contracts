@@ -11,21 +11,21 @@ use contract::{
     },
     unwrap_or_revert::UnwrapOrRevert,
 };
-use libs::access::access_control;
+use libs::access::AccessControl;
 use types::{contracts::NamedKeys, EntryPoints, Key, U256};
 
 /// # Purpose
 /// * Returns the `has_role` property.
 #[no_mangle]
 pub extern "C" fn has_role() {
-    access_control::ret_has_role()
+    AccessControl::ret_has_role()
 }
 
 /// # Purpose
 /// * Returns the `get_role_admin` property.
 #[no_mangle]
 pub extern "C" fn get_role_admin() {
-    access_control::ret_role_admin()
+    AccessControl::ret_role_admin()
 }
 
 /// # Purpose
@@ -35,7 +35,7 @@ pub extern "C" fn get_role_admin() {
 /// * `account` - `Key` -> Address of the account.
 #[no_mangle]
 pub extern "C" fn grant_role() {
-    access_control::grant_role();
+    AccessControl::grant_role();
 }
 
 /// # Purpose
@@ -45,7 +45,7 @@ pub extern "C" fn grant_role() {
 /// * `account` - `Key` -> Address of the account.
 #[no_mangle]
 pub extern "C" fn revoke_role() {
-    access_control::revoke_role();
+    AccessControl::revoke_role();
 }
 
 /// # Purpose
@@ -55,7 +55,7 @@ pub extern "C" fn revoke_role() {
 /// * `account` - `Key` -> Address of the account.
 #[no_mangle]
 pub extern "C" fn renounce_role() {
-    access_control::renounce_role();
+    AccessControl::renounce_role();
 }
 
 /// # Purpose
@@ -68,8 +68,8 @@ pub extern "C" fn set_role_admin() {
     let role: U256 = runtime::get_named_arg("role");
     let admin_role: U256 = runtime::get_named_arg("admin_role");
 
-    access_control::check_only_role(role);
-    access_control::_set_role_admin(role, admin_role);
+    AccessControl::check_only_role(role);
+    AccessControl::_set_role_admin(role, admin_role);
 }
 
 #[no_mangle]
@@ -78,22 +78,22 @@ pub extern "C" fn call() {
 
     let mut entry_points = EntryPoints::new();
 
-    access_control::set_entry_points(&mut entry_points);
+    AccessControl::set_entry_points(&mut entry_points);
 
     let role_admin_seed_uref =
-        storage::new_dictionary(access_control::ACCESS_ROLE_ADMIN_KEY).unwrap_or_revert();
+        storage::new_dictionary(AccessControl::ACCESS_ROLE_ADMIN_KEY).unwrap_or_revert();
     let role_members_seed_uref =
-        storage::new_dictionary(access_control::ACCESS_ROLE_MEMBER_KEY).unwrap_or_revert();
+        storage::new_dictionary(AccessControl::ACCESS_ROLE_MEMBER_KEY).unwrap_or_revert();
 
     let mut named_keys = NamedKeys::new();
 
     let (contract_package_hash, access_uref) = create_contract_package_at_hash();
     named_keys.insert(
-        access_control::ACCESS_ROLE_ADMIN_KEY.to_string(),
+        AccessControl::ACCESS_ROLE_ADMIN_KEY.to_string(),
         role_admin_seed_uref.into(),
     );
     named_keys.insert(
-        access_control::ACCESS_ROLE_MEMBER_KEY.to_string(),
+        AccessControl::ACCESS_ROLE_MEMBER_KEY.to_string(),
         role_members_seed_uref.into(),
     );
     named_keys.insert(
@@ -103,7 +103,7 @@ pub extern "C" fn call() {
 
     storage::dictionary_put(
         role_members_seed_uref,
-        &access_control::get_role_members_key(access_control::DEFAULT_ADMIN_ROLE, default_admin),
+        &AccessControl::get_role_members_key(AccessControl::DEFAULT_ADMIN_ROLE, default_admin),
         true,
     );
 

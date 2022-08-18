@@ -7,6 +7,7 @@ use types::{account::AccountHash, CLType, EntryPoint, EntryPoints, Key, Paramete
 
 use crate::{
     error::Error,
+    token::erc20::ERC20,
     utils::{
         contract_package_hash, endpoint, get, get_caller, get_key, key_to_str, ret, set, set_key,
     },
@@ -153,240 +154,255 @@ impl ERC20Event {
     }
 }
 
-pub fn set_entry_points(current_entry_points: &mut EntryPoints) -> &EntryPoints {
-    current_entry_points.add_entry_point(ERC20EntryPoints::name());
-    current_entry_points.add_entry_point(ERC20EntryPoints::symbol());
-    current_entry_points.add_entry_point(ERC20EntryPoints::decimals());
-    current_entry_points.add_entry_point(ERC20EntryPoints::total_supply());
-    current_entry_points.add_entry_point(ERC20EntryPoints::balance_of());
-    current_entry_points.add_entry_point(ERC20EntryPoints::allowance());
-    current_entry_points.add_entry_point(ERC20EntryPoints::approve());
-    current_entry_points.add_entry_point(ERC20EntryPoints::increase_allowance());
-    current_entry_points.add_entry_point(ERC20EntryPoints::decrease_allowance());
-    current_entry_points.add_entry_point(ERC20EntryPoints::transfer());
-    current_entry_points.add_entry_point(ERC20EntryPoints::transfer_from());
+impl ERC20 {
+    pub fn set_entry_points(current_entry_points: &mut EntryPoints) -> &EntryPoints {
+        current_entry_points.add_entry_point(ERC20EntryPoints::name());
+        current_entry_points.add_entry_point(ERC20EntryPoints::symbol());
+        current_entry_points.add_entry_point(ERC20EntryPoints::decimals());
+        current_entry_points.add_entry_point(ERC20EntryPoints::total_supply());
+        current_entry_points.add_entry_point(ERC20EntryPoints::balance_of());
+        current_entry_points.add_entry_point(ERC20EntryPoints::allowance());
+        current_entry_points.add_entry_point(ERC20EntryPoints::approve());
+        current_entry_points.add_entry_point(ERC20EntryPoints::increase_allowance());
+        current_entry_points.add_entry_point(ERC20EntryPoints::decrease_allowance());
+        current_entry_points.add_entry_point(ERC20EntryPoints::transfer());
+        current_entry_points.add_entry_point(ERC20EntryPoints::transfer_from());
 
-    current_entry_points
-}
+        current_entry_points
+    }
 
-pub fn emit(erc20_event: &ERC20Event) {
-    let mut events = Vec::new();
-    let package = contract_package_hash();
-    match erc20_event {
-        ERC20Event::Transfer { from, to, value } => {
-            let mut event = BTreeMap::new();
-            event.insert("contract_package_hash", package.to_string());
-            event.insert("event_type", erc20_event.type_name());
-            event.insert("from", from.to_string());
-            event.insert("to", to.to_string());
-            event.insert("value", value.to_string());
-            events.push(event);
+    pub fn emit(erc20_event: &ERC20Event) {
+        let mut events = Vec::new();
+        let package = contract_package_hash();
+        match erc20_event {
+            ERC20Event::Transfer { from, to, value } => {
+                let mut event = BTreeMap::new();
+                event.insert("contract_package_hash", package.to_string());
+                event.insert("event_type", erc20_event.type_name());
+                event.insert("from", from.to_string());
+                event.insert("to", to.to_string());
+                event.insert("value", value.to_string());
+                events.push(event);
+            }
+            ERC20Event::Approval {
+                owner,
+                spender,
+                value,
+            } => {
+                let mut event = BTreeMap::new();
+                event.insert("contract_package_hash", package.to_string());
+                event.insert("event_type", erc20_event.type_name());
+                event.insert("owner", owner.to_string());
+                event.insert("spender", spender.to_string());
+                event.insert("value", value.to_string());
+                events.push(event);
+            }
+        };
+        for event in events {
+            let _: URef = storage::new_uref(event);
         }
-        ERC20Event::Approval {
+    }
+
+    pub fn balance_of(account: Key) -> U256 {
+        let balance: U256 = get(ERC20_BALANCE_KEY, &key_to_str(&account));
+        balance
+    }
+
+    pub fn ret_balance_of() {
+        let account: Key = runtime::get_named_arg("account");
+        ret(ERC20::balance_of(account))
+    }
+
+    pub fn total_supply() -> U256 {
+        let supply: U256 = get_key(ERC20_TOTAL_SUPPLY_KEY);
+        supply
+    }
+
+    pub fn ret_total_supply() {
+        ret(ERC20::total_supply())
+    }
+
+    pub fn get_allowance(owner: Key, spender: Key) -> U256 {
+        let allowance: U256 = get(
+            ERC20_ALLOWANCE_KEY,
+            &ERC20::get_allowances_key(owner, spender),
+        );
+        allowance
+    }
+
+    pub fn ret_allowance() {
+        let owner: Key = runtime::get_named_arg("owner");
+        let spender: Key = runtime::get_named_arg("spender");
+        ret(ERC20::get_allowance(owner, spender))
+    }
+
+    pub fn approve() {
+        let owner: Key = get_caller();
+        let spender: Key = runtime::get_named_arg("spender");
+        let amount: U256 = runtime::get_named_arg("amount");
+
+        ERC20::_approve(owner, spender, amount);
+
+        ret(true)
+    }
+
+    pub fn increase_allowance() {
+        let owner: Key = get_caller();
+        let spender: Key = runtime::get_named_arg("spender");
+        let amount: U256 = runtime::get_named_arg("amount");
+
+        ERC20::_approve(
             owner,
             spender,
-            value,
-        } => {
-            let mut event = BTreeMap::new();
-            event.insert("contract_package_hash", package.to_string());
-            event.insert("event_type", erc20_event.type_name());
-            event.insert("owner", owner.to_string());
-            event.insert("spender", spender.to_string());
-            event.insert("value", value.to_string());
-            events.push(event);
-        }
-    };
-    for event in events {
-        let _: URef = storage::new_uref(event);
-    }
-}
+            ERC20::get_allowance(owner, spender) + amount,
+        );
 
-pub fn balance_of(account: Key) -> U256 {
-    let balance: U256 = get(ERC20_BALANCE_KEY, &key_to_str(&account));
-    balance
-}
-
-pub fn ret_balance_of() {
-    let account: Key = runtime::get_named_arg("account");
-    ret(balance_of(account))
-}
-
-pub fn total_supply() -> U256 {
-    let supply: U256 = get_key(ERC20_TOTAL_SUPPLY_KEY);
-    supply
-}
-
-pub fn ret_total_supply() {
-    ret(total_supply())
-}
-
-pub fn get_allowance(owner: Key, spender: Key) -> U256 {
-    let allowance: U256 = get(ERC20_ALLOWANCE_KEY, &get_allowances_key(owner, spender));
-    allowance
-}
-
-pub fn ret_allowance() {
-    let owner: Key = runtime::get_named_arg("owner");
-    let spender: Key = runtime::get_named_arg("spender");
-    ret(get_allowance(owner, spender))
-}
-
-pub fn approve() {
-    let owner: Key = get_caller();
-    let spender: Key = runtime::get_named_arg("spender");
-    let amount: U256 = runtime::get_named_arg("amount");
-
-    _approve(owner, spender, amount);
-
-    ret(true)
-}
-
-pub fn increase_allowance() {
-    let owner: Key = get_caller();
-    let spender: Key = runtime::get_named_arg("spender");
-    let amount: U256 = runtime::get_named_arg("amount");
-
-    _approve(owner, spender, get_allowance(owner, spender) + amount);
-
-    ret(true)
-}
-
-pub fn decrease_allowance() {
-    let owner: Key = get_caller();
-    let spender: Key = runtime::get_named_arg("spender");
-    let amount: U256 = runtime::get_named_arg("amount");
-
-    let current_allowance = get_allowance(owner, spender);
-    if current_allowance < amount {
-        runtime::revert(Error::InsufficientAllowance);
-    }
-    _approve(owner, spender, get_allowance(owner, spender) - amount);
-
-    ret(true)
-}
-
-pub fn transfer() {
-    let from: Key = get_caller();
-    let to: Key = runtime::get_named_arg("to");
-    let amount: U256 = runtime::get_named_arg("amount");
-
-    _transfer(from, to, amount);
-
-    ret(true)
-}
-
-pub fn transfer_from() {
-    let spender: Key = get_caller();
-    let from: Key = runtime::get_named_arg("from");
-    let to: Key = runtime::get_named_arg("to");
-    let amount: U256 = runtime::get_named_arg("amount");
-
-    _spend_allowance(from, spender, amount);
-    _transfer(from, to, amount);
-
-    ret(true)
-}
-
-fn _transfer(from: Key, to: Key, amount: U256) {
-    if from == Key::Account(AccountHash::default()) || to == Key::Account(AccountHash::default()) {
-        runtime::revert(Error::ZeroAddress);
+        ret(true)
     }
 
-    let from_balance = balance_of(from);
-    if from_balance < amount {
-        runtime::revert(Error::InsufficientBalance);
-    }
+    pub fn decrease_allowance() {
+        let owner: Key = get_caller();
+        let spender: Key = runtime::get_named_arg("spender");
+        let amount: U256 = runtime::get_named_arg("amount");
 
-    let to_balance = balance_of(to);
-
-    set(ERC20_BALANCE_KEY, &key_to_str(&from), from_balance - amount);
-    set(ERC20_BALANCE_KEY, &key_to_str(&to), to_balance + amount);
-
-    emit(&ERC20Event::Transfer {
-        from,
-        to,
-        value: amount,
-    });
-}
-
-fn _mint(to: Key, amount: U256) {
-    if to == Key::Account(AccountHash::default()) {
-        runtime::revert(Error::ZeroAddress);
-    }
-
-    let to_balance = balance_of(to);
-    let supply = total_supply();
-
-    set_key(ERC20_TOTAL_SUPPLY_KEY, supply + amount);
-    set(ERC20_BALANCE_KEY, &key_to_str(&to), to_balance + amount);
-
-    emit(&ERC20Event::Transfer {
-        from: Key::Account(AccountHash::default()),
-        to,
-        value: amount,
-    });
-}
-
-fn _burn(account: Key, amount: U256) {
-    if account == Key::Account(AccountHash::default()) {
-        runtime::revert(Error::ZeroAddress);
-    }
-
-    let account_balance = balance_of(account);
-    if account_balance < amount {
-        runtime::revert(Error::InsufficientBalance);
-    }
-    let supply = total_supply();
-
-    set_key(ERC20_TOTAL_SUPPLY_KEY, supply - amount);
-    set(
-        ERC20_BALANCE_KEY,
-        &key_to_str(&account),
-        account_balance - amount,
-    );
-
-    emit(&ERC20Event::Transfer {
-        from: account,
-        to: Key::Account(AccountHash::default()),
-        value: amount,
-    });
-}
-
-fn _approve(owner: Key, spender: Key, amount: U256) {
-    if owner == Key::Account(AccountHash::default())
-        || spender == Key::Account(AccountHash::default())
-    {
-        runtime::revert(Error::ZeroAddress);
-    }
-
-    set(
-        ERC20_ALLOWANCE_KEY,
-        &get_allowances_key(owner, spender),
-        amount,
-    );
-
-    emit(&ERC20Event::Approval {
-        owner,
-        spender,
-        value: amount,
-    });
-}
-
-fn _spend_allowance(owner: Key, spender: Key, amount: U256) {
-    let allowance = get_allowance(owner, spender);
-
-    if allowance != U256::MAX {
-        if allowance < amount {
+        let current_allowance = ERC20::get_allowance(owner, spender);
+        if current_allowance < amount {
             runtime::revert(Error::InsufficientAllowance);
         }
+        ERC20::_approve(
+            owner,
+            spender,
+            ERC20::get_allowance(owner, spender) - amount,
+        );
+
+        ret(true)
+    }
+
+    pub fn transfer() {
+        let from: Key = get_caller();
+        let to: Key = runtime::get_named_arg("to");
+        let amount: U256 = runtime::get_named_arg("amount");
+
+        ERC20::_transfer(from, to, amount);
+
+        ret(true)
+    }
+
+    pub fn transfer_from() {
+        let spender: Key = get_caller();
+        let from: Key = runtime::get_named_arg("from");
+        let to: Key = runtime::get_named_arg("to");
+        let amount: U256 = runtime::get_named_arg("amount");
+
+        ERC20::_spend_allowance(from, spender, amount);
+        ERC20::_transfer(from, to, amount);
+
+        ret(true)
+    }
+
+    fn _transfer(from: Key, to: Key, amount: U256) {
+        if from == Key::Account(AccountHash::default())
+            || to == Key::Account(AccountHash::default())
+        {
+            runtime::revert(Error::ZeroAddress);
+        }
+
+        let from_balance = ERC20::balance_of(from);
+        if from_balance < amount {
+            runtime::revert(Error::InsufficientBalance);
+        }
+
+        let to_balance = ERC20::balance_of(to);
+
+        set(ERC20_BALANCE_KEY, &key_to_str(&from), from_balance - amount);
+        set(ERC20_BALANCE_KEY, &key_to_str(&to), to_balance + amount);
+
+        ERC20::emit(&ERC20Event::Transfer {
+            from,
+            to,
+            value: amount,
+        });
+    }
+
+    fn _mint(to: Key, amount: U256) {
+        if to == Key::Account(AccountHash::default()) {
+            runtime::revert(Error::ZeroAddress);
+        }
+
+        let to_balance = ERC20::balance_of(to);
+        let supply = ERC20::total_supply();
+
+        set_key(ERC20_TOTAL_SUPPLY_KEY, supply + amount);
+        set(ERC20_BALANCE_KEY, &key_to_str(&to), to_balance + amount);
+
+        ERC20::emit(&ERC20Event::Transfer {
+            from: Key::Account(AccountHash::default()),
+            to,
+            value: amount,
+        });
+    }
+
+    fn _burn(account: Key, amount: U256) {
+        if account == Key::Account(AccountHash::default()) {
+            runtime::revert(Error::ZeroAddress);
+        }
+
+        let account_balance = ERC20::balance_of(account);
+        if account_balance < amount {
+            runtime::revert(Error::InsufficientBalance);
+        }
+        let supply = ERC20::total_supply();
+
+        set_key(ERC20_TOTAL_SUPPLY_KEY, supply - amount);
+        set(
+            ERC20_BALANCE_KEY,
+            &key_to_str(&account),
+            account_balance - amount,
+        );
+
+        ERC20::emit(&ERC20Event::Transfer {
+            from: account,
+            to: Key::Account(AccountHash::default()),
+            value: amount,
+        });
+    }
+
+    fn _approve(owner: Key, spender: Key, amount: U256) {
+        if owner == Key::Account(AccountHash::default())
+            || spender == Key::Account(AccountHash::default())
+        {
+            runtime::revert(Error::ZeroAddress);
+        }
+
         set(
             ERC20_ALLOWANCE_KEY,
-            &get_allowances_key(owner, spender),
-            allowance - amount,
+            &ERC20::get_allowances_key(owner, spender),
+            amount,
         );
-    }
-}
 
-pub fn get_allowances_key(owner: Key, spender: Key) -> String {
-    [key_to_str(&owner), key_to_str(&spender)].join("_")
+        ERC20::emit(&ERC20Event::Approval {
+            owner,
+            spender,
+            value: amount,
+        });
+    }
+
+    fn _spend_allowance(owner: Key, spender: Key, amount: U256) {
+        let allowance = ERC20::get_allowance(owner, spender);
+
+        if allowance != U256::MAX {
+            if allowance < amount {
+                runtime::revert(Error::InsufficientAllowance);
+            }
+            set(
+                ERC20_ALLOWANCE_KEY,
+                &ERC20::get_allowances_key(owner, spender),
+                allowance - amount,
+            );
+        }
+    }
+
+    pub fn get_allowances_key(owner: Key, spender: Key) -> String {
+        [key_to_str(&owner), key_to_str(&spender)].join("_")
+    }
 }
