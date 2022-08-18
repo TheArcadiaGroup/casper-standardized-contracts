@@ -2,7 +2,9 @@ use blake2::{
     digest::{Update, VariableOutput},
     VarBlake2b,
 };
-use casper_types::{bytesrepr::ToBytes, ContractHash, ContractPackageHash, Key, U256};
+use casper_types::{
+    account::AccountHash, bytesrepr::ToBytes, ContractHash, ContractPackageHash, Key, U256,
+};
 use core::time;
 use renvm_sig::keccak256;
 use std::{
@@ -21,4 +23,8 @@ pub fn get_current_time() -> u64 {
 pub fn key_to_str(key: &Key) -> String {
     let preimage = key.to_bytes().unwrap();
     base64::encode(&preimage)
+}
+
+pub fn to_key(account: AccountHash) -> Key {
+    Key::Account(account)
 }

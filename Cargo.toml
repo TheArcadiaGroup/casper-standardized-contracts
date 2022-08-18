@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "examples/ownable",
+    "examples/erc20",
     "access_control",
     "tests",
     "libs"

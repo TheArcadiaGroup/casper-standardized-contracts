@@ -1,8 +1,8 @@
 #[cfg(test)]
-pub mod tests;
+pub mod access;
 
 #[cfg(test)]
-pub mod ownable;
+pub mod token;
 
 #[cfg(test)]
 pub mod utilities;

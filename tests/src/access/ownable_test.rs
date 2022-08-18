@@ -1,6 +1,6 @@
 use casper_types::{account::AccountHash, Key};
 
-use crate::ownable::{Ownable, Sender};
+use crate::access::ownable_helper::{Ownable, Sender};
 
 fn to_key(account: AccountHash) -> Key {
     Key::Account(account)

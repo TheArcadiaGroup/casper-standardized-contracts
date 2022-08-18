@@ -1,5 +1,5 @@
 [package]
-name = "ownable"
+name = "erc20"
 description = "Casper Ownable contract"
 version = "0.1.0"
 authors = ["The Arcadia Group"]
@@ -13,7 +13,7 @@ types = { package = "casper-types", version="=1.4.5" }
 libs = { path = "../../libs" }
 
 [[bin]]
-name = "ownable"
+name = "erc20"
 path = "main.rs"
 bench = false
 doctest = false

@@ -4,6 +4,8 @@ prepare:
 build-contract:
 	cargo build --release -p ownable --target wasm32-unknown-unknown
 	wasm-strip target/wasm32-unknown-unknown/release/ownable.wasm
+	cargo build --release -p erc20 --target wasm32-unknown-unknown
+	wasm-strip target/wasm32-unknown-unknown/release/erc20.wasm
 
 test-only:
 	cargo test -p tests
