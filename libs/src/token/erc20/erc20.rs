@@ -13,10 +13,6 @@ use crate::{
     },
 };
 
-pub const ERC20_BALANCE_KEY: &str = "balances";
-pub const ERC20_ALLOWANCE_KEY: &str = "allowances";
-pub const ERC20_TOTAL_SUPPLY_KEY: &str = "total_supply";
-
 struct ERC20EntryPoints {}
 
 impl ERC20EntryPoints {
@@ -155,6 +151,13 @@ impl ERC20Event {
 }
 
 impl ERC20 {
+    pub const ERC20_NAME_KEY: &'static str = "name";
+    pub const ERC20_SYMBOL_KEY: &'static str = "symbol";
+    pub const ERC20_DECIMALS_KEY: &'static str = "decimals";
+    pub const ERC20_BALANCE_KEY: &'static str = "balances";
+    pub const ERC20_ALLOWANCE_KEY: &'static str = "allowances";
+    pub const ERC20_TOTAL_SUPPLY_KEY: &'static str = "total_supply";
+
     pub fn set_entry_points(current_entry_points: &mut EntryPoints) -> &EntryPoints {
         current_entry_points.add_entry_point(ERC20EntryPoints::name());
         current_entry_points.add_entry_point(ERC20EntryPoints::symbol());
@@ -203,8 +206,32 @@ impl ERC20 {
         }
     }
 
+    pub fn name() -> String {
+        get_key(ERC20::ERC20_NAME_KEY)
+    }
+
+    pub fn ret_name() {
+        ret(ERC20::name())
+    }
+
+    pub fn symbol() -> String {
+        get_key(ERC20::ERC20_SYMBOL_KEY)
+    }
+
+    pub fn ret_symbol() {
+        ret(ERC20::symbol())
+    }
+
+    pub fn decimals() -> u8 {
+        get_key(ERC20::ERC20_DECIMALS_KEY)
+    }
+
+    pub fn ret_decimals() {
+        ret(ERC20::decimals())
+    }
+
     pub fn balance_of(account: Key) -> U256 {
-        let balance: U256 = get(ERC20_BALANCE_KEY, &key_to_str(&account));
+        let balance: U256 = get(ERC20::ERC20_BALANCE_KEY, &key_to_str(&account));
         balance
     }
 
@@ -214,7 +241,7 @@ impl ERC20 {
     }
 
     pub fn total_supply() -> U256 {
-        let supply: U256 = get_key(ERC20_TOTAL_SUPPLY_KEY);
+        let supply: U256 = get_key(ERC20::ERC20_TOTAL_SUPPLY_KEY);
         supply
     }
 
@@ -224,7 +251,7 @@ impl ERC20 {
 
     pub fn get_allowance(owner: Key, spender: Key) -> U256 {
         let allowance: U256 = get(
-            ERC20_ALLOWANCE_KEY,
+            ERC20::ERC20_ALLOWANCE_KEY,
             &ERC20::get_allowances_key(owner, spender),
         );
         allowance
@@ -314,8 +341,16 @@ impl ERC20 {
 
         let to_balance = ERC20::balance_of(to);
 
-        set(ERC20_BALANCE_KEY, &key_to_str(&from), from_balance - amount);
-        set(ERC20_BALANCE_KEY, &key_to_str(&to), to_balance + amount);
+        set(
+            ERC20::ERC20_BALANCE_KEY,
+            &key_to_str(&from),
+            from_balance - amount,
+        );
+        set(
+            ERC20::ERC20_BALANCE_KEY,
+            &key_to_str(&to),
+            to_balance + amount,
+        );
 
         ERC20::emit(&ERC20Event::Transfer {
             from,
@@ -332,8 +367,12 @@ impl ERC20 {
         let to_balance = ERC20::balance_of(to);
         let supply = ERC20::total_supply();
 
-        set_key(ERC20_TOTAL_SUPPLY_KEY, supply + amount);
-        set(ERC20_BALANCE_KEY, &key_to_str(&to), to_balance + amount);
+        set_key(ERC20::ERC20_TOTAL_SUPPLY_KEY, supply + amount);
+        set(
+            ERC20::ERC20_BALANCE_KEY,
+            &key_to_str(&to),
+            to_balance + amount,
+        );
 
         ERC20::emit(&ERC20Event::Transfer {
             from: Key::Account(AccountHash::default()),
@@ -353,9 +392,9 @@ impl ERC20 {
         }
         let supply = ERC20::total_supply();
 
-        set_key(ERC20_TOTAL_SUPPLY_KEY, supply - amount);
+        set_key(ERC20::ERC20_TOTAL_SUPPLY_KEY, supply - amount);
         set(
-            ERC20_BALANCE_KEY,
+            ERC20::ERC20_BALANCE_KEY,
             &key_to_str(&account),
             account_balance - amount,
         );
@@ -375,7 +414,7 @@ impl ERC20 {
         }
 
         set(
-            ERC20_ALLOWANCE_KEY,
+            ERC20::ERC20_ALLOWANCE_KEY,
             &ERC20::get_allowances_key(owner, spender),
             amount,
         );
@@ -395,7 +434,7 @@ impl ERC20 {
                 runtime::revert(Error::InsufficientAllowance);
             }
             set(
-                ERC20_ALLOWANCE_KEY,
+                ERC20::ERC20_ALLOWANCE_KEY,
                 &ERC20::get_allowances_key(owner, spender),
                 allowance - amount,
             );

@@ -109,7 +109,7 @@ impl Ownable {
         let old_owner = Ownable::owner();
 
         if check_permission && old_owner != get_caller() {
-            runtime::revert(Error::CannotMintToZeroHash);
+            runtime::revert(Error::InvalidPermission);
         }
         set_key("owner", new_owner);
 

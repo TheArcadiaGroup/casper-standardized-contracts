@@ -1,10 +1,9 @@
 use casper_types::{account::AccountHash, Key};
 
-use crate::access::ownable_helper::{Ownable, Sender};
-
-fn to_key(account: AccountHash) -> Key {
-    Key::Account(account)
-}
+use crate::{
+    access::ownable_helper::Ownable,
+    utilities::{to_key, Sender},
+};
 
 // ------------ START - ERC20 Tests ------------
 
@@ -28,7 +27,7 @@ fn should_transfer_ownership() {
 }
 
 #[test]
-#[should_panic = "Authorization"]
+#[should_panic = "65535"]
 fn should_not_transfer_ownership_by_invalid_owner() {
     let mut contract = Ownable::deployed();
     contract.transfer_ownership(to_key(contract.bob), Sender(contract.joe));
@@ -45,7 +44,7 @@ fn should_renounce_ownership() {
 }
 
 #[test]
-#[should_panic = "Authorization"]
+#[should_panic = "65535"]
 fn should_not_renounce_ownership_by_invalid_owner() {
     let mut contract = Ownable::deployed();
     contract.renounce_ownership(Sender(contract.joe));

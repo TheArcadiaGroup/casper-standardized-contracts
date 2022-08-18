@@ -20,6 +20,8 @@ use types::{
 
 use crate::error::Error;
 
+pub const CONTRACT_PACKAGE_HASH_KEY: &str = "contract_package_hash";
+
 pub fn ret<T: CLTyped + ToBytes>(value: T) {
     runtime::ret(CLValue::from_t(value).unwrap_or_revert())
 }
@@ -80,7 +82,7 @@ pub fn get_caller() -> Key {
 }
 
 pub fn contract_package_hash() -> ContractPackageHash {
-    get_key::<ContractPackageHash>("contract_package_hash")
+    get_key::<ContractPackageHash>(CONTRACT_PACKAGE_HASH_KEY)
 }
 
 pub fn endpoint(name: &str, param: Vec<Parameter>, ret: CLType) -> EntryPoint {
